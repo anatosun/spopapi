@@ -70,7 +70,7 @@ Generate a random proxy token with:
 openssl rand -hex 32
 ```
 
-The server refuses to start without `PROXY_API_TOKEN`. Every endpoint, including `/stats` and `/healthz`, requires this bearer token. It is separate from the Spotify credentials used for upstream requests.
+The server refuses to start without `PROXY_API_TOKEN`. Every endpoint except `/healthz`, including `/stats`, requires this bearer token. It is separate from the Spotify credentials used for upstream requests.
 
 Build and start the server:
 
@@ -92,8 +92,7 @@ curl -D- \
 curl -H "Authorization: Bearer $PROXY_API_TOKEN" \
   http://127.0.0.1:8080/stats
 
-curl -H "Authorization: Bearer $PROXY_API_TOKEN" \
-  http://127.0.0.1:8080/healthz
+curl http://127.0.0.1:8080/healthz
 ```
 
 `X-Cache: HIT` means the response came from Redis or Postgres. `X-Cache: MISS` means the server called Spotify.

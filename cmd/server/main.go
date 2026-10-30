@@ -60,14 +60,18 @@ func main() {
 		TTLs: apiproxy.DefaultTTLs(),
 	}
 
+	authed := http.NewServeMux()
+	authed.HandleFunc("GET /stats", proxy.Stats)
+	authed.HandleFunc("GET /v1/{path...}", proxy.Handle)
+
+	// /healthz stays unauthenticated so orchestrators can probe it.
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", proxy.Health)
-	mux.HandleFunc("GET /stats", proxy.Stats)
-	mux.HandleFunc("GET /v1/{path...}", proxy.Handle)
+	mux.Handle("/", apiproxy.BearerAuth(proxyToken, authed))
 
 	srv := &http.Server{
 		Addr:              listen,
-		Handler:           apiproxy.BearerAuth(proxyToken, mux),
+		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
