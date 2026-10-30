@@ -1,0 +1,7 @@
+.git
+.env
+archive.zip
+spopapi-import
+spopapi-*.sqlite3
+*.db
+*.log

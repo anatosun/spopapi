@@ -1,0 +1,58 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: spopapi
+      POSTGRES_PASSWORD: spopapi
+      POSTGRES_DB: spopapi
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spopapi -d spopapi"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  proxy:
+    image: ${SPOPAPI_IMAGE:-spopapi:local}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      LISTEN: :8080
+      REDIS_ADDR: redis:6379
+      DATABASE_URL: postgres://spopapi:spopapi@postgres:5432/spopapi
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID:?set SPOTIFY_CLIENT_ID in .env}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET:?set SPOTIFY_CLIENT_SECRET in .env}
+      SPOTIFY_UPSTREAM: https://api.spotify.com
+      PROXY_API_TOKEN: ${PROXY_API_TOKEN:?set PROXY_API_TOKEN in .env}
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'wget -q -O /dev/null --header="Authorization: Bearer $${PROXY_API_TOKEN}" http://127.0.0.1:8080/healthz'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
